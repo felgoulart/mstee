@@ -1,6 +1,6 @@
 # MStee Aulas de Tênis — site
 
-Site estático da MStee Aulas de Tênis (Rio de Janeiro), publicado pelo GitHub Pages.
+Site estático da MStee Aulas de Tênis (Rio de Janeiro). Pode ser hospedado em qualquer servidor de arquivos estáticos.
 
 - `index.html` — página inicial (programas, coordenação, prévia do ranking e aniversariantes, unidades, contato)
 - `ranking.html` — ranking completo por categoria, com busca
@@ -12,7 +12,7 @@ Site estático da MStee Aulas de Tênis (Rio de Janeiro), publicado pelo GitHub 
 
 Acesse `/admin.html` (há um link no rodapé). O painel edita o ranking e os aniversariantes
 e, ao clicar em **Salvar e publicar**, grava os arquivos direto neste repositório.
-O GitHub Pages republica o site em cerca de 1 minuto.
+Para as alterações aparecerem no site, a hospedagem precisa servir a versão mais recente deste repositório.
 
 ### Chave de acesso
 
@@ -47,9 +47,3 @@ python -m http.server 8000
 
 Abra http://localhost:8000. O painel de administração funciona localmente também, mas grava
 sempre no repositório do GitHub. Repositório e branch ficam no topo de `assets/js/admin.js`.
-
-## Domínio próprio
-
-Para servir em `mstee.com.br`: crie um arquivo `CNAME` com `mstee.com.br`, configure o domínio em
-Settings → Pages e aponte o DNS (registros A para os IPs do GitHub Pages, ou CNAME de `www`
-para `felgoulart.github.io`).

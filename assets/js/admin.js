@@ -1,10 +1,9 @@
 /* MStee — área do administrador
  *
- * O site é estático (GitHub Pages). Este painel lê e grava os arquivos
+ * O site é estático. Este painel lê e grava os arquivos
  * data/ranking.json, data/aniversarios.json e as fotos dos aniversariantes
  * diretamente no repositório, usando a API do GitHub com o token do
- * administrador. Cada "Salvar e publicar" vira um commit; o GitHub Pages
- * republica o site em cerca de 1 minuto.
+ * administrador. Cada "Salvar e publicar" vira um commit no repositório.
  */
 (function () {
   "use strict";
@@ -34,7 +33,7 @@
     ranking: null, rankingSha: null, rankingOrig: "",
     aniv: null, anivSha: null, anivOrig: "",
   };
-  const previas = {}; // caminho da foto -> dataURL (para exibir antes do site republicar)
+  const previas = {}; // caminho da foto -> dataURL (para exibir antes do site ser atualizado)
 
   /* ---------- armazenamento do token ---------- */
   function lerToken() {
@@ -553,7 +552,7 @@
         st.aniv = JSON.parse(texto);
         renderAniv();
       }
-      status.textContent = "Publicado! O site é atualizado em cerca de 1 minuto.";
+      status.textContent = "Publicado! As alterações foram salvas no repositório.";
       status.className = "status ok";
       toast("Alterações publicadas com sucesso.");
     } catch (err) {
