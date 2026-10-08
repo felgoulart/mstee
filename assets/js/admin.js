@@ -21,6 +21,13 @@
 
   const $ = (s, el = document) => el.querySelector(s);
 
+  const svg = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const ICO = {
+    cima: svg("<path d=\"M12 19V5M5 12l7-7 7 7\"/>"),
+    baixo: svg("<path d=\"M12 5v14M19 12l-7 7-7-7\"/>"),
+    x: svg("<path d=\"M6 6l12 12M18 6L6 18\"/>"),
+  };
+
   /* ---------- estado ---------- */
   let token = "";
   const st = {
@@ -236,9 +243,9 @@
         <div class="cat-head">
           <input class="inp" data-campo="cat-nome" value="${esc(c.nome)}" placeholder="Nome da categoria" aria-label="Nome da categoria">
           <span class="cat-count">${c.jogadores.length} jogador${c.jogadores.length === 1 ? "" : "es"}</span>
-          <button class="icon-btn" data-acao="cat-subir" title="Mover categoria para cima" ${ci === 0 ? "disabled" : ""}>↑</button>
-          <button class="icon-btn" data-acao="cat-descer" title="Mover categoria para baixo" ${ci === r.categorias.length - 1 ? "disabled" : ""}>↓</button>
-          <button class="icon-btn danger" data-acao="cat-remover" title="Remover categoria">✕</button>
+          <button class="icon-btn" data-acao="cat-subir" title="Mover categoria para cima" ${ci === 0 ? "disabled" : ""}>${ICO.cima}</button>
+          <button class="icon-btn" data-acao="cat-descer" title="Mover categoria para baixo" ${ci === r.categorias.length - 1 ? "disabled" : ""}>${ICO.baixo}</button>
+          <button class="icon-btn danger" data-acao="cat-remover" title="Remover categoria">${ICO.x}</button>
         </div>
         <div class="cat-body">
           ${c.jogadores.length ? `<div class="rows-head"><span>Pos.</span><span>Nome</span><span>Pontos</span><span></span></div>` :
@@ -247,11 +254,11 @@
             <div class="row" data-ji="${ji}">
               <input class="inp pos" data-campo="pos" type="number" min="1" value="${esc(j.pos)}" aria-label="Posição">
               <input class="inp" data-campo="nome" value="${esc(j.nome)}" placeholder="Nome do jogador" aria-label="Nome">
-              <input class="inp pts" data-campo="pontos" value="${esc(j.pontos ?? "")}" placeholder="—" aria-label="Pontos (opcional)">
+              <input class="inp pts" data-campo="pontos" value="${esc(j.pontos ?? "")}" placeholder="opcional" aria-label="Pontos (opcional)">
               <div class="row-actions">
-                <button class="icon-btn" data-acao="j-subir" title="Subir" ${ji === 0 ? "disabled" : ""}>↑</button>
-                <button class="icon-btn" data-acao="j-descer" title="Descer" ${ji === c.jogadores.length - 1 ? "disabled" : ""}>↓</button>
-                <button class="icon-btn danger" data-acao="j-remover" title="Remover jogador">✕</button>
+                <button class="icon-btn" data-acao="j-subir" title="Subir" ${ji === 0 ? "disabled" : ""}>${ICO.cima}</button>
+                <button class="icon-btn" data-acao="j-descer" title="Descer" ${ji === c.jogadores.length - 1 ? "disabled" : ""}>${ICO.baixo}</button>
+                <button class="icon-btn danger" data-acao="j-remover" title="Remover jogador">${ICO.x}</button>
               </div>
             </div>`).join("")}
           <div class="cat-tools">
@@ -396,7 +403,7 @@
           <label class="field"><span>Mensagem</span><textarea data-campo="mensagem" rows="3">${esc(p.mensagem)}</textarea></label>
           <div class="bcard-foot">
             <button class="link" data-acao="msg-padrao">Usar mensagem padrão</button>
-            <button class="icon-btn danger" data-acao="remover" title="Remover aniversariante">✕</button>
+            <button class="icon-btn danger" data-acao="remover" title="Remover aniversariante">${ICO.x}</button>
           </div>
         </div>
       </div>`;

@@ -137,3 +137,4 @@ textarea { font: inherit; resize: vertical; width: 100%; padding: 10px 12px; bor
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast.erro { background: var(--red); }
+.icon-btn svg { width: 16px; height: 16px; }
