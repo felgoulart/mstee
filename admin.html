@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Administração — MStee</title>
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body class="admin">
+
+<!-- ================= LOGIN ================= -->
+<section id="tela-login" class="login" hidden>
+  <div class="login-card">
+    <img src="assets/img/logo.png" alt="MStee" width="160">
+    <h1>Área do administrador</h1>
+    <p class="muted">Entre com a chave de acesso (token do GitHub) para editar o ranking e os aniversariantes.</p>
+    <form id="form-login">
+      <label class="field">
+        <span>Chave de acesso</span>
+        <input id="token" type="password" autocomplete="current-password" placeholder="github_pat_…" required>
+      </label>
+      <label class="check"><input id="lembrar" type="checkbox" checked> Manter conectado neste computador</label>
+      <button class="btn btn--primary btn--block" type="submit">Entrar</button>
+      <p id="login-erro" class="erro" role="alert"></p>
+    </form>
+    <details class="ajuda">
+      <summary>Como obter a chave de acesso?</summary>
+      <ol>
+        <li>Entre no GitHub com a conta que administra o site e abra <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Settings → Developer settings → Fine-grained tokens → Generate new token</a>.</li>
+        <li>Dê um nome (ex.: <em>Admin MStee</em>) e escolha a validade.</li>
+        <li>Em <strong>Repository access</strong>, selecione <em>Only select repositories</em> e marque o repositório do site.</li>
+        <li>Em <strong>Permissions → Repository permissions</strong>, defina <strong>Contents</strong> como <em>Read and write</em>.</li>
+        <li>Clique em <strong>Generate token</strong>, copie o código e cole acima.</li>
+      </ol>
+      <p class="muted">A chave fica salva apenas neste navegador. Nunca compartilhe a chave.</p>
+    </details>
+    <a class="voltar" href="index.html">← Voltar ao site</a>
+  </div>
+</section>
+
+<!-- ================= PAINEL ================= -->
+<div id="tela-painel" hidden>
+  <header class="admin-bar">
+    <div class="wrap">
+      <a class="brand" href="index.html" target="_blank" title="Abrir site"><img src="assets/img/logo.png" alt="MStee" height="40"></a>
+      <nav class="admin-tabs" role="tablist">
+        <button role="tab" data-aba="ranking" aria-selected="true">Ranking</button>
+        <button role="tab" data-aba="aniversarios" aria-selected="false">Aniversariantes</button>
+      </nav>
+      <div class="admin-user">
+        <span id="usuario"></span>
+        <button id="sair" class="link">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap admin-main">
+    <!-- ---------- RANKING ---------- -->
+    <section id="aba-ranking" class="aba">
+      <div class="aba-head">
+        <div>
+          <h1>Ranking</h1>
+          <p class="muted">Edite as categorias e as posições. Posições iguais representam empate.</p>
+        </div>
+        <div class="periodo">
+          <label class="field"><span>Mês</span><select id="r-mes"></select></label>
+          <label class="field"><span>Ano</span><input id="r-ano" type="number" min="2000" max="2100"></label>
+        </div>
+      </div>
+      <div id="r-categorias" class="stack"></div>
+      <button id="r-add-cat" class="btn btn--ghost btn--dashed">+ Nova categoria</button>
+    </section>
+
+    <!-- ---------- ANIVERSARIANTES ---------- -->
+    <section id="aba-aniversarios" class="aba" hidden>
+      <div class="aba-head">
+        <div>
+          <h1>Aniversariantes do mês</h1>
+          <p class="muted">A lista é exibida em ordem de dia no site. Fotos são reduzidas automaticamente.</p>
+        </div>
+        <div class="periodo">
+          <label class="field"><span>Mês</span><select id="a-mes"></select></label>
+          <label class="field"><span>Ano</span><input id="a-ano" type="number" min="2000" max="2100"></label>
+          <button id="a-novo-mes" class="btn btn--ghost btn--sm" title="Limpa a lista e muda para o mês atual">Começar novo mês</button>
+        </div>
+      </div>
+      <div id="a-lista" class="bday-admin-grid"></div>
+      <button id="a-add" class="btn btn--ghost btn--dashed">+ Adicionar aniversariante</button>
+    </section>
+  </main>
+
+  <div class="save-bar">
+    <div class="wrap">
+      <span id="status" class="status">Nenhuma alteração.</span>
+      <div class="save-actions">
+        <button id="descartar" class="btn btn--ghost btn--sm" disabled>Descartar</button>
+        <button id="salvar" class="btn btn--primary" disabled>Salvar e publicar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: colar lista -->
+<dialog id="dlg-colar" class="dlg">
+  <form method="dialog">
+    <h2>Colar lista de jogadores</h2>
+    <p class="muted">Um jogador por linha, já na ordem do ranking. Aceita formatos como <code>01- Nome</code>, <code>1. Nome</code> ou apenas <code>Nome</code>. Para incluir pontos, use <code>Nome ; 120</code>.</p>
+    <textarea id="colar-texto" rows="12" placeholder="01- Rodrigo Peixoto&#10;02- Fabiano Barbosa&#10;03- David Jones"></textarea>
+    <div class="dlg-actions">
+      <button value="cancel" class="btn btn--ghost btn--sm">Cancelar</button>
+      <button value="ok" class="btn btn--primary btn--sm">Substituir lista</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="assets/js/admin.js"></script>
+</body>
+</html>

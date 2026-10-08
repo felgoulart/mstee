@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ranking — MStee Aulas de Tênis</title>
+  <meta name="description" content="Ranking mensal dos alunos MStee: masculino, feminino, master e juvenil.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html" aria-label="MStee — início"><img src="assets/img/logo.png" alt="MStee" width="113" height="48"></a>
+    <button class="nav-toggle" aria-label="Abrir menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <nav class="nav">
+      <a href="index.html#programas">Programas</a>
+      <a href="index.html#sobre">Sobre</a>
+      <a href="ranking.html" aria-current="page">Ranking</a>
+      <a href="aniversarios.html">Aniversariantes</a>
+      <a href="index.html#unidades">Unidades</a>
+      <a class="btn btn--primary" href="index.html#contato">Inscreva-se</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="page-hero">
+    <div class="wrap">
+      <span class="eyebrow" style="color:var(--ball)">Alunos</span>
+      <h1>Ranking <span data-ranking-titulo></span></h1>
+      <p>Classificação atualizada dos alunos MStee por categoria.</p>
+    </div>
+  </section>
+
+  <section class="section section--soft" style="padding-top:48px">
+    <div class="wrap" data-ranking>
+      <p class="loading">Carregando ranking…</p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>© <span id="ano-atual">2026</span> MStee Aulas de Tênis. Todos os direitos reservados.</span>
+    <span>Desenvolvido por <a href="https://github.com/felgoulart" target="_blank" rel="noopener">FelGoulart</a> · <a href="admin.html">Área do administrador</a></span>
+  </div>
+</footer>
+
+<script src="assets/js/site.js"></script>
+</body>
+</html>

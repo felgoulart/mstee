@@ -1,0 +1,18 @@
+{
+  "mes": 6,
+  "ano": 2026,
+  "aniversariantes": [
+    {
+      "nome": "Nicholas Renno Torres",
+      "dia": 9,
+      "foto": "assets/img/aniversarios/nicholas-renno-torres.jpg",
+      "mensagem": "Parabéns, Nicholas! Muita saúde, alegria e ótimos jogos. Feliz aniversário!"
+    },
+    {
+      "nome": "Mateus Rafaelli Castilho",
+      "dia": 10,
+      "foto": "assets/img/aniversarios/mateus-rafaelli-castilho.jpg",
+      "mensagem": "Parabéns, Mateus! Muita saúde, alegria e ótimos jogos. Feliz aniversário!"
+    }
+  ]
+}
