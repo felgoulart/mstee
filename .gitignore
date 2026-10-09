@@ -1,1 +1,3 @@
 Jornalzinho*.pdf
+# Gerados no servidor pela área do administrador (senhas e tentativas de login)
+privado/*.php

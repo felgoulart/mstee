@@ -1,47 +1,38 @@
 # MStee Aulas de Tênis — site
 
-Site estático da MStee Aulas de Tênis (Rio de Janeiro). Pode ser hospedado em qualquer servidor de arquivos estáticos.
+Site da MStee Aulas de Tênis (Rio de Janeiro), feito para hospedagem com PHP (HostGator).
 
 - `index.html` — página inicial (programas, coordenação, prévia do ranking e aniversariantes, unidades, contato)
 - `ranking.html` — ranking completo por categoria, com busca
 - `aniversarios.html` — aniversariantes do mês
-- `admin.html` — área do administrador
-- `data/ranking.js` e `data/aniversarios.js` — dados exibidos no site (em `.js` para o site funcionar também aberto direto do disco)
+- `admin.html` + `admin-api.php` — área do administrador
+- `data/ranking.js` e `data/aniversarios.js` — dados exibidos no site
+  (em `.js` para o site funcionar também aberto direto do disco)
+- `privado/` — usuários e senhas do painel (criado no servidor; bloqueado para acesso pela web)
+
+## Publicar na HostGator
+
+1. Envie todos os arquivos para `public_html` (Gerenciador de Arquivos do cPanel ou FTP),
+   menos `README.md`, `.gitignore` e o PDF do jornalzinho.
+2. Confirme que as pastas `data/`, `assets/img/aniversarios/` e `privado/` permitem gravação
+   (permissão 755, padrão da HostGator).
+3. Ative o SSL (HTTPS) do domínio no cPanel, para a senha não trafegar aberta.
+4. Acesse `https://seu-dominio/admin.html`.
+
+**Atenção ao reenviar o site:** depois que o painel estiver em uso, o ranking e os aniversariantes
+mais recentes ficam no servidor. Ao subir uma nova versão, **não sobrescreva** `data/`,
+`assets/img/aniversarios/` e `privado/`, ou as alterações feitas pelo painel (e as senhas) se perdem.
 
 ## Área do administrador
 
-Acesse `/admin.html` (há um link no rodapé). O painel edita o ranking e os aniversariantes
-e, ao clicar em **Salvar e publicar**, grava os arquivos direto neste repositório.
-Para as alterações aparecerem no site, a hospedagem precisa servir a versão mais recente deste repositório.
+Login com usuário e senha. **Senha inicial: usuário `mauro`, senha `mstee`.**
+O painel mostra um aviso enquanto a senha inicial estiver em uso. Troque em **Alterar senha**
+(mínimo 8 caracteres).
 
-### Login com usuário e senha
-
-O dia a dia é com **usuário e senha**. Senha inicial: usuário `mauro`, senha `mstee`.
-Troque a senha no primeiro acesso pelo botão **Alterar senha** (o painel mostra um aviso
-enquanto a senha inicial estiver em uso).
-
-Como o site não tem servidor, quem grava no repositório é uma chave do GitHub
-(*fine-grained personal access token*). Ela fica em `data/acesso.js` **criptografada**
-(AES-GCM, chave derivada da senha com PBKDF2-SHA256, 600 mil iterações): só quem sabe
-o usuário e a senha consegue usá-la.
-
-**Primeiro acesso (uma vez) ou quando a chave expirar:** na tela de login, clique em
-*Primeiro acesso ou chave expirada*, cole a chave e defina usuário e senha.
-Para criar a chave:
-
-1. GitHub → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**
-   (link direto: https://github.com/settings/personal-access-tokens/new)
-2. **Repository access:** *Only select repositories* → `felgoulart/mstee`
-3. **Permissions → Repository permissions → Contents:** *Read and write*
-4. Gere o token e cole na tela de primeiro acesso.
-
-Importante:
-- `data/acesso.js` fica público junto com o site. Uma senha fraca pode ser descoberta por
-  tentativa e erro, liberando a chave. Use uma senha longa e única. A chave só dá acesso a
-  este repositório, nunca ao resto da conta.
-- Para cortar o acesso, apague o token em Settings → Fine-grained tokens e cadastre um novo.
-- O login precisa de HTTPS (ou do site aberto direto do computador); em `http://` simples
-  o navegador não libera a criptografia.
+- As senhas ficam só como hash (`password_hash`) em `privado/usuarios.php`, criado no primeiro acesso.
+- 5 senhas erradas seguidas bloqueiam o login daquele endereço por 15 minutos.
+- Esqueceu a senha? Apague `privado/usuarios.php` pelo Gerenciador de Arquivos. O acesso volta
+  para `mauro` / `mstee`.
 
 ### O que dá para fazer
 
@@ -54,11 +45,14 @@ Posições repetidas indicam empate.
 mensagem. As fotos são reduzidas para no máximo 1200 px antes do envio e salvas em
 `assets/img/aniversarios/`.
 
-## Desenvolvimento local
+Ao clicar em **Salvar e publicar**, o site já fica atualizado.
+
+## Testar no computador
+
+O site abre direto pelo `index.html`. O painel precisa de PHP:
 
 ```sh
-python -m http.server 8000
+php -S localhost:8000
 ```
 
-Abra http://localhost:8000. O painel de administração funciona localmente também, mas grava
-sempre no repositório do GitHub. Repositório e branch ficam no topo de `assets/js/admin.js`.
+e abra http://localhost:8000/admin.html.

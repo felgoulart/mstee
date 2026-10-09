@@ -1,21 +1,14 @@
 /* MStee — área do administrador
  *
- * O site é estático. Este painel lê e grava os arquivos
- * data/ranking.js, data/aniversarios.js e as fotos dos aniversariantes
- * diretamente no repositório, usando a API do GitHub com o token do
- * administrador. Cada "Salvar e publicar" vira um commit no repositório.
+ * Login com usuário e senha e gravação dos dados no próprio servidor
+ * (HostGator), via admin-api.php: data/ranking.js, data/aniversarios.js e
+ * as fotos dos aniversariantes em assets/img/aniversarios/.
  */
 (function () {
   "use strict";
 
   /* ---------- configuração ---------- */
-  const REPO = { owner: "felgoulart", repo: "mstee", branch: "main" };
-  const ARQ_RANKING = "data/ranking.js";
-  const ARQ_ANIV = "data/aniversarios.js";
-  const ARQ_ACESSO = "data/acesso.js";
-  const PASTA_FOTOS = "assets/img/aniversarios";
-  const CHAVE_SESSAO = "mstee_admin_sessao";
-  const ITERACOES = 600000; // PBKDF2: deixa cada tentativa de senha lenta
+  const API = "admin-api.php";
   const SENHA_MIN = 8;
 
   const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -31,56 +24,18 @@
   };
 
   /* ---------- estado ---------- */
-  let token = "";
   let usuarioAtual = "";
-  let senhaInicial = false;
   const st = {
-    ranking: null, rankingSha: null, rankingOrig: "",
-    aniv: null, anivSha: null, anivOrig: "",
+    ranking: null, rankingOrig: "",
+    aniv: null, anivOrig: "",
   };
-  const previas = {}; // caminho da foto -> dataURL (para exibir antes do site ser atualizado)
-
-  /* ---------- sessão (manter conectado) ---------- */
-  function lerSessao() {
-    try {
-      return JSON.parse(localStorage.getItem(CHAVE_SESSAO) || sessionStorage.getItem(CHAVE_SESSAO) || "null");
-    } catch (e) { return null; }
-  }
-  function gravarSessao(lembrar) {
-    const dados = JSON.stringify({ token, usuario: usuarioAtual, inicial: senhaInicial });
-    try {
-      const usarLocal = lembrar ?? !!localStorage.getItem(CHAVE_SESSAO);
-      (usarLocal ? localStorage : sessionStorage).setItem(CHAVE_SESSAO, dados);
-    } catch (e) { /* navegador sem armazenamento: a sessão vale só nesta aba */ }
-  }
-  function apagarSessao() {
-    try {
-      localStorage.removeItem(CHAVE_SESSAO); sessionStorage.removeItem(CHAVE_SESSAO);
-      localStorage.removeItem("mstee_admin_token"); sessionStorage.removeItem("mstee_admin_token");
-    } catch (e) { }
-  }
+  const previas = {}; // caminho da foto -> dataURL (mostra a foto nova sem recarregar)
 
   /* ---------- utilidades ---------- */
   function esc(s) {
     return String(s ?? "").replace(/[&<>"']/g, (c) => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
     }[c]));
-  }
-  function slug(s) {
-    return String(s).normalize("NFD").replace(/[̀-ͯ]/g, "")
-      .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50) || "foto";
-  }
-  function utf8ParaB64(str) {
-    const bytes = new TextEncoder().encode(str);
-    let bin = "";
-    for (let i = 0; i < bytes.length; i += 0x8000) {
-      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
-    }
-    return btoa(bin);
-  }
-  function b64ParaUtf8(b64) {
-    const bin = atob(b64.replace(/\s/g, ""));
-    return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
   }
   let toastTimer;
   function toast(msg, erro) {
@@ -92,49 +47,35 @@
     toastTimer = setTimeout(() => el.classList.remove("show"), erro ? 6000 : 3500);
   }
 
-  /* ---------- API do GitHub ---------- */
-  async function gh(caminho, opts = {}) {
-    const r = await fetch("https://api.github.com" + caminho, {
-      ...opts,
-      headers: {
-        Accept: "application/vnd.github+json",
-        Authorization: "Bearer " + token,
-        "X-GitHub-Api-Version": "2022-11-28",
-        ...(opts.body ? { "Content-Type": "application/json" } : {}),
-      },
-    });
-    if (!r.ok) {
-      let msg = "";
-      try { msg = (await r.json()).message || ""; } catch (e) { }
-      const err = new Error(msg || "Erro " + r.status);
+  /* ---------- servidor ---------- */
+  async function api(acao, dados) {
+    let r;
+    try {
+      r = await fetch(API + "?acao=" + acao, {
+        method: dados ? "POST" : "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: dados ? { "Content-Type": "application/json", "X-MSTEE": "1" } : {},
+        body: dados ? JSON.stringify(dados) : undefined,
+      });
+    } catch (e) {
+      throw Object.assign(new Error(location.protocol === "file:"
+        ? "A área do administrador só funciona com o site publicado na hospedagem."
+        : "Sem conexão com o servidor."), { status: 0 });
+    }
+    let corpo = null;
+    try { corpo = await r.json(); } catch (e) { /* resposta não é JSON */ }
+    if (!r.ok || !corpo) {
+      const err = new Error((corpo && corpo.erro) ||
+        (r.status === 404 ? "admin-api.php não foi encontrado no servidor." : "Erro no servidor (" + r.status + ")."));
       err.status = r.status;
+      if (r.status === 401 && acao !== "login") voltarAoLogin(err.message);
       throw err;
     }
-    return r.status === 204 ? null : r.json();
-  }
-  const repoPath = (p) => `/repos/${REPO.owner}/${REPO.repo}/contents/${p.split("/").map(encodeURIComponent).join("/")}`;
-
-  async function lerArquivo(caminho) {
-    const d = await gh(repoPath(caminho) + "?ref=" + REPO.branch + "&t=" + Date.now());
-    return { sha: d.sha, texto: b64ParaUtf8(d.content) };
-  }
-  async function gravarArquivo(caminho, conteudoB64, mensagem, sha) {
-    const body = { message: mensagem, content: conteudoB64, branch: REPO.branch };
-    if (sha) body.sha = sha;
-    const d = await gh(repoPath(caminho), { method: "PUT", body: JSON.stringify(body) });
-    return d.content.sha;
+    return corpo;
   }
 
-  /* ---------- serialização ---------- */
-  // Os dados ficam em arquivos .js (window.VAR = {...};) para o site funcionar
-  // também quando aberto direto do disco, onde o navegador bloqueia fetch de JSON.
-  function deJs(texto) {
-    return JSON.parse(texto.slice(texto.indexOf("{"), texto.lastIndexOf("}") + 1));
-  }
-  function paraJs(variavel, json) {
-    return "/* Dados do site. Editado pela área do administrador (admin.html). */\n" +
-      "window." + variavel + " = " + json.trimEnd() + ";\n";
-  }
+  /* ---------- serialização (usada para detectar alterações) ---------- */
   function serialRanking(r) {
     return JSON.stringify({
       mes: +r.mes,
@@ -148,7 +89,7 @@
           return o;
         }),
       })),
-    }, null, 2) + "\n";
+    });
   }
   function serialAniv(a) {
     return JSON.stringify({
@@ -163,7 +104,7 @@
           mensagem: (p.mensagem || "").trim(),
         }))
         .sort((x, y) => x.dia - y.dia),
-    }, null, 2) + "\n";
+    });
   }
   const rankingSujo = () => st.ranking && serialRanking(st.ranking) !== st.rankingOrig;
   const anivSujo = () => st.aniv && (serialAniv(st.aniv) !== st.anivOrig || st.aniv.aniversariantes.some((p) => p._novaFoto));
@@ -175,7 +116,7 @@
     if (r) partes.push("ranking");
     if (a) partes.push("aniversariantes");
     if (partes.length) {
-      el.textContent = "Alterações não publicadas em: " + partes.join(" e ") + ".";
+      el.textContent = "Alterações não salvas em: " + partes.join(" e ") + ".";
       el.className = "status sujo";
     } else if (!el.classList.contains("ok")) {
       el.textContent = "Nenhuma alteração.";
@@ -185,90 +126,34 @@
     $("#descartar").disabled = !partes.length;
   }
 
-  /* ---------- cofre: chave do GitHub criptografada com usuário e senha ----------
-   * data/acesso.js guarda, para cada usuário, a chave do GitHub cifrada com
-   * AES-GCM. A chave de cifra é derivada da senha (PBKDF2-SHA256), então só
-   * quem sabe o usuário e a senha consegue recuperar a chave do GitHub.
-   */
-  const paraB64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
-  const deB64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
-  const normUsuario = (u) => String(u).trim().toLowerCase();
-
-  async function derivarChave(usuario, senha, salt, iteracoes) {
-    if (!window.crypto || !crypto.subtle) {
-      throw new Error("Este navegador só permite o login em páginas HTTPS.");
-    }
-    const enc = new TextEncoder();
-    const base = await crypto.subtle.importKey("raw", enc.encode(senha), "PBKDF2", false, ["deriveKey"]);
-    const sal = new Uint8Array([...salt, ...enc.encode(normUsuario(usuario))]);
-    return crypto.subtle.deriveKey(
-      { name: "PBKDF2", salt: sal, iterations: iteracoes, hash: "SHA-256" },
-      base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
-  }
-  async function cifrar(usuario, senha, segredo) {
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const chave = await derivarChave(usuario, senha, salt, ITERACOES);
-    const dados = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, chave, new TextEncoder().encode(segredo));
-    return {
-      usuario: normUsuario(usuario), iteracoes: ITERACOES,
-      salt: paraB64(salt), iv: paraB64(iv), dados: paraB64(dados),
-      inicial: senha.length < SENHA_MIN,
-    };
-  }
-  async function decifrar(reg, senha) {
-    const chave = await derivarChave(reg.usuario, senha, deB64(reg.salt), reg.iteracoes);
-    const claro = await crypto.subtle.decrypt({ name: "AES-GCM", iv: deB64(reg.iv) }, chave, deB64(reg.dados));
-    return new TextDecoder().decode(claro);
-  }
-
-  // Lê os usuários cadastrados: versão mais recente do repositório (se houver
-  // internet) ou a cópia carregada pela própria página.
-  async function lerAcessoPublico() {
-    try {
-      const url = `https://raw.githubusercontent.com/${REPO.owner}/${REPO.repo}/${REPO.branch}/${ARQ_ACESSO}?t=${Date.now()}`;
-      const r = await fetch(url, { cache: "no-store" });
-      if (r.ok) return deJs(await r.text());
-    } catch (e) { /* sem internet: usa a cópia local */ }
-    return window.MSTEE_ACESSO || { usuarios: [] };
-  }
-
-  // Grava o registro de um usuário em data/acesso.js (exige token já válido).
-  async function salvarAcesso(reg, substituir) {
-    let atual = { usuarios: [] }, sha;
-    try {
-      const a = await lerArquivo(ARQ_ACESSO);
-      atual = deJs(a.texto);
-      sha = a.sha;
-    } catch (e) {
-      if (e.status !== 404) throw e;
-    }
-    const remover = new Set([reg.usuario, substituir && normUsuario(substituir)]);
-    atual.usuarios = (atual.usuarios || []).filter((u) => !remover.has(u.usuario));
-    atual.usuarios.push(reg);
-    const texto = paraJs("MSTEE_ACESSO", JSON.stringify(atual, null, 2));
-    await gravarArquivo(ARQ_ACESSO, utf8ParaB64(texto), `Atualiza acesso do usuário ${reg.usuario}`, sha);
-  }
-
   /* ---------- login ---------- */
-  async function entrar(t) {
-    token = t;
-    await gh(`/repos/${REPO.owner}/${REPO.repo}`); // confirma que a chave acessa o repositório
+  async function abrirPainel(sessao) {
+    usuarioAtual = sessao.usuario;
     await carregarDados();
     $("#usuario").textContent = usuarioAtual;
-    $("#aviso-senha").hidden = !senhaInicial;
+    $("#aviso-senha").hidden = !sessao.inicial;
     $("#tela-login").hidden = true;
     $("#tela-painel").hidden = false;
   }
 
-  function mostrarForm(qual) {
-    $("#form-login").hidden = qual !== "login";
-    $("#form-config").hidden = qual !== "config";
-    $("#login-erro").textContent = "";
-    $("#cfg-erro").textContent = "";
-    (qual === "login" ? $("#login-usuario") : $("#cfg-token")).focus();
+  function voltarAoLogin(msg) {
+    $("#tela-painel").hidden = true;
+    $("#tela-login").hidden = false;
+    $("#login-erro").textContent = msg || "";
+    $("#login-senha").value = "";
+    $("#login-usuario").focus();
   }
-  document.querySelectorAll("[data-ir]").forEach((b) => b.addEventListener("click", () => mostrarForm(b.dataset.ir)));
+
+  async function carregarDados() {
+    const d = await api("dados");
+    st.ranking = d.ranking;
+    st.rankingOrig = serialRanking(st.ranking);
+    st.aniv = d.aniversarios;
+    st.anivOrig = serialAniv(st.aniv);
+    renderRanking();
+    renderAniv();
+    atualizarStatus();
+  }
 
   async function comBotao(form, rotulo, fn) {
     const btn = form.querySelector('button[type="submit"]');
@@ -278,76 +163,30 @@
     try { await fn(); } finally { btn.disabled = false; btn.textContent = original; }
   }
 
-  function msgErroChave(err) {
-    return err.status === 401 ? "A chave do GitHub é inválida ou expirou." :
-      err.status === 403 || err.status === 404 ? "A chave do GitHub não tem acesso de escrita ao repositório do site." :
-      err.message;
-  }
-
   $("#form-login").addEventListener("submit", (e) => {
     e.preventDefault();
     const erro = $("#login-erro");
     erro.textContent = "";
     comBotao(e.target, "Entrando…", async () => {
-      const usuario = normUsuario($("#login-usuario").value);
-      const senha = $("#login-senha").value;
-      const acesso = await lerAcessoPublico();
-      if (!acesso.usuarios || !acesso.usuarios.length) {
-        erro.textContent = "O painel ainda não foi configurado. Clique em \"Primeiro acesso\".";
-        return;
-      }
-      const reg = acesso.usuarios.find((u) => u.usuario === usuario);
-      let t;
       try {
-        if (!reg) throw new Error();
-        t = await decifrar(reg, senha);
+        const sessao = await api("login", { usuario: $("#login-usuario").value, senha: $("#login-senha").value });
+        await abrirPainel(sessao);
       } catch (err) {
-        erro.textContent = err.message.includes("HTTPS") ? err.message : "Usuário ou senha incorretos.";
-        return;
-      }
-      usuarioAtual = reg.usuario;
-      senhaInicial = !!reg.inicial;
-      try {
-        await entrar(t);
-        gravarSessao($("#lembrar").checked);
-      } catch (err) {
-        token = "";
-        erro.textContent = err.status === 401
-          ? "A chave do GitHub guardada expirou. Clique em \"Primeiro acesso ou chave expirada\" para cadastrar uma nova."
-          : "Não foi possível entrar: " + msgErroChave(err);
+        erro.textContent = err.message;
       }
     });
   });
 
-  $("#form-config").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const erro = $("#cfg-erro");
-    erro.textContent = "";
-    comBotao(e.target, "Salvando…", async () => {
-      const t = $("#cfg-token").value.trim();
-      const usuario = normUsuario($("#cfg-usuario").value);
-      const senha = $("#cfg-senha").value;
-      if (!usuario || !senha) { erro.textContent = "Preencha usuário e senha."; return; }
-      try {
-        token = t;
-        await gh(`/repos/${REPO.owner}/${REPO.repo}`);
-        const reg = await cifrar(usuario, senha, t);
-        await salvarAcesso(reg);
-        usuarioAtual = reg.usuario;
-        senhaInicial = reg.inicial;
-        await entrar(t);
-        gravarSessao($("#lembrar").checked);
-        toast("Acesso configurado. Nas próximas vezes entre com usuário e senha.");
-      } catch (err) {
-        token = "";
-        erro.textContent = msgErroChave(err);
-      }
-    });
+  $("#sair").addEventListener("click", async () => {
+    if ((rankingSujo() || anivSujo()) && !confirm("Há alterações não salvas. Sair mesmo assim?")) return;
+    try { await api("sair", {}); } catch (e) { /* sai mesmo assim */ }
+    location.reload();
   });
 
   /* ---------- alterar senha ---------- */
   function abrirSenha() {
     $("#nova-usuario").value = usuarioAtual;
+    $("#senha-atual").value = "";
     $("#nova-senha").value = "";
     $("#nova-senha2").value = "";
     $("#senha-erro").textContent = "";
@@ -360,46 +199,26 @@
   $("#form-senha").addEventListener("submit", (e) => {
     e.preventDefault();
     const erro = $("#senha-erro");
-    const usuario = normUsuario($("#nova-usuario").value);
     const senha = $("#nova-senha").value;
     erro.textContent = "";
-    if (!usuario) { erro.textContent = "Informe o usuário."; return; }
-    if (senha.length < SENHA_MIN) { erro.textContent = `A senha precisa ter pelo menos ${SENHA_MIN} caracteres.`; return; }
+    if (senha.length < SENHA_MIN) { erro.textContent = `A nova senha precisa ter pelo menos ${SENHA_MIN} caracteres.`; return; }
     if (senha !== $("#nova-senha2").value) { erro.textContent = "As senhas não conferem."; return; }
     comBotao(e.target, "Salvando…", async () => {
       try {
-        const reg = await cifrar(usuario, senha, token);
-        await salvarAcesso(reg, usuarioAtual);
-        usuarioAtual = reg.usuario;
-        senhaInicial = false;
-        gravarSessao();
+        const sessao = await api("senha", {
+          senhaAtual: $("#senha-atual").value,
+          usuario: $("#nova-usuario").value,
+          novaSenha: senha,
+        });
+        usuarioAtual = sessao.usuario;
         $("#usuario").textContent = usuarioAtual;
         $("#aviso-senha").hidden = true;
         $("#dlg-senha").close();
         toast("Senha alterada. Use a nova senha no próximo login.");
       } catch (err) {
-        erro.textContent = "Não foi possível salvar: " + msgErroChave(err);
+        erro.textContent = err.message;
       }
     });
-  });
-
-  async function carregarDados() {
-    const [r, a] = await Promise.all([lerArquivo(ARQ_RANKING), lerArquivo(ARQ_ANIV)]);
-    st.ranking = deJs(r.texto);
-    st.rankingSha = r.sha;
-    st.rankingOrig = serialRanking(st.ranking);
-    st.aniv = deJs(a.texto);
-    st.anivSha = a.sha;
-    st.anivOrig = serialAniv(st.aniv);
-    renderRanking();
-    renderAniv();
-    atualizarStatus();
-  }
-
-  $("#sair").addEventListener("click", () => {
-    if ((rankingSujo() || anivSujo()) && !confirm("Há alterações não publicadas. Sair mesmo assim?")) return;
-    apagarSessao();
-    location.reload();
   });
 
   /* ---------- abas ---------- */
@@ -677,6 +496,7 @@
     });
   }
 
+
   /* =========================================================
      SALVAR / DESCARTAR
      ========================================================= */
@@ -703,17 +523,16 @@
     const btn = $("#salvar");
     btn.disabled = true;
     $("#descartar").disabled = true;
-    btn.textContent = "Publicando…";
+    btn.textContent = "Salvando…";
     const status = $("#status");
     status.className = "status";
     try {
       if (rankingSujo()) {
-        status.textContent = "Publicando ranking…";
-        const texto = serialRanking(st.ranking);
-        const r = st.ranking;
-        st.rankingSha = await gravarArquivo(ARQ_RANKING, utf8ParaB64(paraJs("MSTEE_RANKING", texto)),
-          `Atualiza ranking ${MESES[r.mes - 1]}/${r.ano}`, st.rankingSha);
-        st.rankingOrig = texto;
+        status.textContent = "Salvando ranking…";
+        const r = await api("salvar", { ranking: JSON.parse(serialRanking(st.ranking)) });
+        st.ranking = r.ranking;
+        st.rankingOrig = serialRanking(st.ranking);
+        renderRanking();
       }
       if (anivSujo()) {
         const a = st.aniv;
@@ -721,37 +540,26 @@
         for (let k = 0; k < comFoto.length; k++) {
           const p = comFoto[k];
           status.textContent = `Enviando foto ${k + 1} de ${comFoto.length}…`;
-          const caminho = `${PASTA_FOTOS}/${a.ano}-${String(a.mes).padStart(2, "0")}-${slug(p.nome)}-${Date.now().toString(36)}.jpg`;
-          await gravarArquivo(caminho, p._novaFoto.base64, `Foto de aniversário: ${p.nome.trim()}`);
+          const { caminho } = await api("foto", { nome: p.nome, ano: a.ano, mes: a.mes, imagem: p._novaFoto.base64 });
           previas[caminho] = p._novaFoto.dataUrl;
           p.foto = caminho;
           delete p._novaFoto;
         }
         a.aniversariantes.forEach((p) => { delete p._novaFoto; });
-        status.textContent = "Publicando aniversariantes…";
-        const texto = serialAniv(a);
-        st.anivSha = await gravarArquivo(ARQ_ANIV, utf8ParaB64(paraJs("MSTEE_ANIVERSARIOS", texto)),
-          `Atualiza aniversariantes ${MESES[a.mes - 1]}/${a.ano}`, st.anivSha);
-        st.anivOrig = texto;
-        // mantém a lista na mesma ordem em que foi publicada
-        st.aniv = JSON.parse(texto);
+        status.textContent = "Salvando aniversariantes…";
+        const r = await api("salvar", { aniversarios: JSON.parse(serialAniv(a)) });
+        // usa a versão gravada (já em ordem de dia)
+        st.aniv = r.aniversarios;
+        st.anivOrig = serialAniv(st.aniv);
         renderAniv();
       }
-      status.textContent = "Publicado! As alterações foram salvas no repositório.";
+      status.textContent = "Salvo! O site já está atualizado.";
       status.className = "status ok";
-      toast("Alterações publicadas com sucesso.");
+      toast("Alterações salvas com sucesso.");
     } catch (err) {
       status.className = "status sujo";
-      status.textContent = "Falha ao publicar.";
-      if (err.status === 409 || err.status === 422) {
-        toast("O arquivo foi alterado em outro lugar. Recarregue a página e refaça a alteração.", true);
-      } else if (err.status === 401) {
-        toast("Sua chave de acesso expirou. Saia e entre novamente.", true);
-      } else if (err.status === 403 || err.status === 404) {
-        toast("A chave não tem permissão de escrita (Contents: Read and write).", true);
-      } else {
-        toast("Erro ao publicar: " + err.message, true);
-      }
+      status.textContent = "Falha ao salvar.";
+      toast(err.message, true);
     } finally {
       btn.textContent = "Salvar e publicar";
       atualizarStatus();
@@ -759,7 +567,7 @@
   });
 
   $("#descartar").addEventListener("click", async () => {
-    if (!confirm("Descartar todas as alterações não publicadas?")) return;
+    if (!confirm("Descartar todas as alterações não salvas?")) return;
     try {
       await carregarDados();
       toast("Alterações descartadas.");
@@ -774,15 +582,14 @@
 
   /* ---------- início ---------- */
   (async function iniciar() {
-    const sessao = lerSessao();
-    if (sessao && sessao.token) {
-      usuarioAtual = sessao.usuario || "";
-      senhaInicial = !!sessao.inicial;
-      try { await entrar(sessao.token); return; }
-      catch (e) { apagarSessao(); token = ""; }
+    try {
+      const sessao = await api("sessao");
+      if (sessao.usuario) { await abrirPainel(sessao); return; }
+      $("#tela-login").hidden = false;
+      $("#login-usuario").focus();
+    } catch (err) {
+      $("#tela-login").hidden = false;
+      $("#login-erro").textContent = err.message;
     }
-    $("#tela-login").hidden = false;
-    const acesso = await lerAcessoPublico();
-    mostrarForm(acesso.usuarios && acesso.usuarios.length ? "login" : "config");
   })();
 })();

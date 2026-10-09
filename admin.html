@@ -30,42 +30,10 @@
         <span>Senha</span>
         <input id="login-senha" type="password" autocomplete="current-password" required>
       </label>
-      <label class="check"><input id="lembrar" type="checkbox" checked> Manter conectado neste computador</label>
       <button class="btn btn--primary btn--block" type="submit">Entrar</button>
       <p id="login-erro" class="erro" role="alert"></p>
-      <button type="button" class="link link--center" data-ir="config">Primeiro acesso ou chave expirada</button>
     </form>
 
-    <form id="form-config" hidden>
-      <p class="muted">Configuração feita uma única vez (ou quando a chave do GitHub expirar). A chave fica guardada no site <strong>criptografada</strong> com o usuário e a senha definidos abaixo.</p>
-      <label class="field">
-        <span>Chave de acesso do GitHub</span>
-        <input id="cfg-token" type="password" autocomplete="off" placeholder="github_pat_…" required>
-      </label>
-      <div class="field-row">
-        <label class="field">
-          <span>Usuário</span>
-          <input id="cfg-usuario" value="mauro" autocomplete="off" autocapitalize="none" spellcheck="false" required>
-        </label>
-        <label class="field">
-          <span>Senha</span>
-          <input id="cfg-senha" type="password" value="mstee" autocomplete="new-password" required>
-        </label>
-      </div>
-      <button class="btn btn--primary btn--block" type="submit">Salvar e entrar</button>
-      <p id="cfg-erro" class="erro" role="alert"></p>
-      <details class="ajuda">
-        <summary>Como obter a chave de acesso?</summary>
-        <ol>
-          <li>Entre no GitHub com a conta dona do repositório e abra <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Settings → Developer settings → Fine-grained tokens → Generate new token</a>.</li>
-          <li>Dê um nome (ex.: <em>Admin MStee</em>) e escolha a validade.</li>
-          <li>Em <strong>Repository access</strong>, selecione <em>Only select repositories</em> e marque <em>mstee</em>.</li>
-          <li>Em <strong>Permissions → Repository permissions</strong>, defina <strong>Contents</strong> como <em>Read and write</em>.</li>
-          <li>Clique em <strong>Generate token</strong>, copie o código e cole acima.</li>
-        </ol>
-      </details>
-      <button type="button" class="link link--center" data-ir="login">← Voltar para o login</button>
-    </form>
 
     <a class="voltar" href="index.html">← Voltar ao site</a>
   </div>
@@ -150,6 +118,10 @@
       <input id="nova-usuario" autocomplete="username" autocapitalize="none" spellcheck="false" required>
     </label>
     <label class="field">
+      <span>Senha atual</span>
+      <input id="senha-atual" type="password" autocomplete="current-password" required>
+    </label>
+    <label class="field">
       <span>Nova senha (mínimo 8 caracteres)</span>
       <input id="nova-senha" type="password" autocomplete="new-password" minlength="8" required>
     </label>
@@ -180,7 +152,6 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<script src="data/acesso.js"></script>
 <script src="assets/js/admin.js"></script>
 </body>
 </html>
