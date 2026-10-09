@@ -19,27 +19,54 @@
   <div class="login-card">
     <img src="assets/img/logo.png" alt="MStee" width="160">
     <h1>Área do administrador</h1>
-    <p class="muted">Entre com a chave de acesso (token do GitHub) para editar o ranking e os aniversariantes.</p>
+
     <form id="form-login">
+      <p class="muted">Entre para editar o ranking e os aniversariantes.</p>
       <label class="field">
-        <span>Chave de acesso</span>
-        <input id="token" type="password" autocomplete="current-password" placeholder="github_pat_…" required>
+        <span>Usuário</span>
+        <input id="login-usuario" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+      </label>
+      <label class="field">
+        <span>Senha</span>
+        <input id="login-senha" type="password" autocomplete="current-password" required>
       </label>
       <label class="check"><input id="lembrar" type="checkbox" checked> Manter conectado neste computador</label>
       <button class="btn btn--primary btn--block" type="submit">Entrar</button>
       <p id="login-erro" class="erro" role="alert"></p>
+      <button type="button" class="link link--center" data-ir="config">Primeiro acesso ou chave expirada</button>
     </form>
-    <details class="ajuda">
-      <summary>Como obter a chave de acesso?</summary>
-      <ol>
-        <li>Entre no GitHub com a conta que administra o site e abra <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Settings → Developer settings → Fine-grained tokens → Generate new token</a>.</li>
-        <li>Dê um nome (ex.: <em>Admin MStee</em>) e escolha a validade.</li>
-        <li>Em <strong>Repository access</strong>, selecione <em>Only select repositories</em> e marque o repositório do site.</li>
-        <li>Em <strong>Permissions → Repository permissions</strong>, defina <strong>Contents</strong> como <em>Read and write</em>.</li>
-        <li>Clique em <strong>Generate token</strong>, copie o código e cole acima.</li>
-      </ol>
-      <p class="muted">A chave fica salva apenas neste navegador. Nunca compartilhe a chave.</p>
-    </details>
+
+    <form id="form-config" hidden>
+      <p class="muted">Configuração feita uma única vez (ou quando a chave do GitHub expirar). A chave fica guardada no site <strong>criptografada</strong> com o usuário e a senha definidos abaixo.</p>
+      <label class="field">
+        <span>Chave de acesso do GitHub</span>
+        <input id="cfg-token" type="password" autocomplete="off" placeholder="github_pat_…" required>
+      </label>
+      <div class="field-row">
+        <label class="field">
+          <span>Usuário</span>
+          <input id="cfg-usuario" value="mauro" autocomplete="off" autocapitalize="none" spellcheck="false" required>
+        </label>
+        <label class="field">
+          <span>Senha</span>
+          <input id="cfg-senha" type="password" value="mstee" autocomplete="new-password" required>
+        </label>
+      </div>
+      <button class="btn btn--primary btn--block" type="submit">Salvar e entrar</button>
+      <p id="cfg-erro" class="erro" role="alert"></p>
+      <details class="ajuda">
+        <summary>Como obter a chave de acesso?</summary>
+        <ol>
+          <li>Entre no GitHub com a conta dona do repositório e abra <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Settings → Developer settings → Fine-grained tokens → Generate new token</a>.</li>
+          <li>Dê um nome (ex.: <em>Admin MStee</em>) e escolha a validade.</li>
+          <li>Em <strong>Repository access</strong>, selecione <em>Only select repositories</em> e marque <em>mstee</em>.</li>
+          <li>Em <strong>Permissions → Repository permissions</strong>, defina <strong>Contents</strong> como <em>Read and write</em>.</li>
+          <li>Clique em <strong>Generate token</strong>, copie o código e cole acima.</li>
+        </ol>
+      </details>
+      <button type="button" class="link link--center" data-ir="login">← Voltar para o login</button>
+    </form>
+
     <a class="voltar" href="index.html">← Voltar ao site</a>
   </div>
 </section>
@@ -55,10 +82,18 @@
       </nav>
       <div class="admin-user">
         <span id="usuario"></span>
+        <button id="abrir-senha" class="link">Alterar senha</button>
         <button id="sair" class="link">Sair</button>
       </div>
     </div>
   </header>
+
+  <div id="aviso-senha" class="aviso" hidden>
+    <div class="wrap">
+      <span>Você está usando a <strong>senha inicial</strong>. Troque por uma senha só sua para proteger o painel.</span>
+      <button class="btn btn--ball btn--sm" data-abrir-senha>Alterar senha</button>
+    </div>
+  </div>
 
   <main class="wrap admin-main">
     <!-- ---------- RANKING ---------- -->
@@ -106,6 +141,30 @@
   </div>
 </div>
 
+<!-- Modal: alterar senha -->
+<dialog id="dlg-senha" class="dlg">
+  <form id="form-senha">
+    <h2>Alterar senha</h2>
+    <label class="field">
+      <span>Usuário</span>
+      <input id="nova-usuario" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    </label>
+    <label class="field">
+      <span>Nova senha (mínimo 8 caracteres)</span>
+      <input id="nova-senha" type="password" autocomplete="new-password" minlength="8" required>
+    </label>
+    <label class="field">
+      <span>Confirme a nova senha</span>
+      <input id="nova-senha2" type="password" autocomplete="new-password" minlength="8" required>
+    </label>
+    <p id="senha-erro" class="erro" role="alert"></p>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn--ghost btn--sm" data-fechar>Cancelar</button>
+      <button type="submit" class="btn btn--primary btn--sm">Salvar senha</button>
+    </div>
+  </form>
+</dialog>
+
 <!-- Modal: colar lista -->
 <dialog id="dlg-colar" class="dlg">
   <form method="dialog">
@@ -121,6 +180,7 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+<script src="data/acesso.js"></script>
 <script src="assets/js/admin.js"></script>
 </body>
 </html>

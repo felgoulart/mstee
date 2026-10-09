@@ -14,19 +14,34 @@ Acesse `/admin.html` (há um link no rodapé). O painel edita o ranking e os ani
 e, ao clicar em **Salvar e publicar**, grava os arquivos direto neste repositório.
 Para as alterações aparecerem no site, a hospedagem precisa servir a versão mais recente deste repositório.
 
-### Chave de acesso
+### Login com usuário e senha
 
-O login usa um *fine-grained personal access token* do GitHub, criado uma única vez:
+O dia a dia é com **usuário e senha**. Senha inicial: usuário `mauro`, senha `mstee`.
+Troque a senha no primeiro acesso pelo botão **Alterar senha** (o painel mostra um aviso
+enquanto a senha inicial estiver em uso).
+
+Como o site não tem servidor, quem grava no repositório é uma chave do GitHub
+(*fine-grained personal access token*). Ela fica em `data/acesso.js` **criptografada**
+(AES-GCM, chave derivada da senha com PBKDF2-SHA256, 600 mil iterações): só quem sabe
+o usuário e a senha consegue usá-la.
+
+**Primeiro acesso (uma vez) ou quando a chave expirar:** na tela de login, clique em
+*Primeiro acesso ou chave expirada*, cole a chave e defina usuário e senha.
+Para criar a chave:
 
 1. GitHub → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**
    (link direto: https://github.com/settings/personal-access-tokens/new)
 2. **Repository access:** *Only select repositories* → `felgoulart/mstee`
 3. **Permissions → Repository permissions → Contents:** *Read and write*
-4. Gere o token e cole na tela de login do painel.
+4. Gere o token e cole na tela de primeiro acesso.
 
-Para dar acesso a outra pessoa sem compartilhar a conta, adicione-a como colaboradora do repositório
-(Settings → Collaborators) e ela cria o próprio token com os mesmos passos.
-Para revogar, apague o token em Settings → Fine-grained tokens.
+Importante:
+- `data/acesso.js` fica público junto com o site. Uma senha fraca pode ser descoberta por
+  tentativa e erro, liberando a chave. Use uma senha longa e única. A chave só dá acesso a
+  este repositório, nunca ao resto da conta.
+- Para cortar o acesso, apague o token em Settings → Fine-grained tokens e cadastre um novo.
+- O login precisa de HTTPS (ou do site aberto direto do computador); em `http://` simples
+  o navegador não libera a criptografia.
 
 ### O que dá para fazer
 

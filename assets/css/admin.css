@@ -138,3 +138,19 @@ textarea { font: inherit; resize: vertical; width: 100%; padding: 10px 12px; bor
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast.erro { background: var(--red); }
 .icon-btn svg { width: 16px; height: 16px; }
+
+/* ---------- login com usuário e senha ---------- */
+.login-card form { display: grid; gap: 12px; }
+.login-card form > p { margin: 0 0 4px; text-align: center; }
+.login-card .check { margin: 2px 0 6px; }
+.login-card .erro { margin: 0; text-align: center; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 420px) { .field-row { grid-template-columns: 1fr; } }
+.link--center { justify-self: center; font-size: .92rem; }
+.login-card .ajuda { margin-top: 4px; }
+
+/* ---------- aviso de senha inicial ---------- */
+.aviso { background: #fff7d1; border-bottom: 1px solid #f0de8a; color: var(--ink-2); }
+.aviso .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 10px; padding-bottom: 10px; font-size: .95rem; }
+.dlg form { display: grid; gap: 12px; }
+.dlg form h2 { margin-bottom: 0; }

@@ -12,8 +12,11 @@
   const REPO = { owner: "felgoulart", repo: "mstee", branch: "main" };
   const ARQ_RANKING = "data/ranking.js";
   const ARQ_ANIV = "data/aniversarios.js";
+  const ARQ_ACESSO = "data/acesso.js";
   const PASTA_FOTOS = "assets/img/aniversarios";
-  const CHAVE_TOKEN = "mstee_admin_token";
+  const CHAVE_SESSAO = "mstee_admin_sessao";
+  const ITERACOES = 600000; // PBKDF2: deixa cada tentativa de senha lenta
+  const SENHA_MIN = 8;
 
   const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -29,24 +32,32 @@
 
   /* ---------- estado ---------- */
   let token = "";
+  let usuarioAtual = "";
+  let senhaInicial = false;
   const st = {
     ranking: null, rankingSha: null, rankingOrig: "",
     aniv: null, anivSha: null, anivOrig: "",
   };
   const previas = {}; // caminho da foto -> dataURL (para exibir antes do site ser atualizado)
 
-  /* ---------- armazenamento do token ---------- */
-  function lerToken() {
-    try { return localStorage.getItem(CHAVE_TOKEN) || sessionStorage.getItem(CHAVE_TOKEN) || ""; }
-    catch (e) { return ""; }
-  }
-  function gravarToken(t, lembrar) {
+  /* ---------- sessão (manter conectado) ---------- */
+  function lerSessao() {
     try {
-      (lembrar ? localStorage : sessionStorage).setItem(CHAVE_TOKEN, t);
-    } catch (e) { /* navegador sem armazenamento: o token vale só nesta aba */ }
+      return JSON.parse(localStorage.getItem(CHAVE_SESSAO) || sessionStorage.getItem(CHAVE_SESSAO) || "null");
+    } catch (e) { return null; }
   }
-  function apagarToken() {
-    try { localStorage.removeItem(CHAVE_TOKEN); sessionStorage.removeItem(CHAVE_TOKEN); } catch (e) { }
+  function gravarSessao(lembrar) {
+    const dados = JSON.stringify({ token, usuario: usuarioAtual, inicial: senhaInicial });
+    try {
+      const usarLocal = lembrar ?? !!localStorage.getItem(CHAVE_SESSAO);
+      (usarLocal ? localStorage : sessionStorage).setItem(CHAVE_SESSAO, dados);
+    } catch (e) { /* navegador sem armazenamento: a sessão vale só nesta aba */ }
+  }
+  function apagarSessao() {
+    try {
+      localStorage.removeItem(CHAVE_SESSAO); sessionStorage.removeItem(CHAVE_SESSAO);
+      localStorage.removeItem("mstee_admin_token"); sessionStorage.removeItem("mstee_admin_token");
+    } catch (e) { }
   }
 
   /* ---------- utilidades ---------- */
@@ -174,16 +185,203 @@
     $("#descartar").disabled = !partes.length;
   }
 
+  /* ---------- cofre: chave do GitHub criptografada com usuário e senha ----------
+   * data/acesso.js guarda, para cada usuário, a chave do GitHub cifrada com
+   * AES-GCM. A chave de cifra é derivada da senha (PBKDF2-SHA256), então só
+   * quem sabe o usuário e a senha consegue recuperar a chave do GitHub.
+   */
+  const paraB64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
+  const deB64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  const normUsuario = (u) => String(u).trim().toLowerCase();
+
+  async function derivarChave(usuario, senha, salt, iteracoes) {
+    if (!window.crypto || !crypto.subtle) {
+      throw new Error("Este navegador só permite o login em páginas HTTPS.");
+    }
+    const enc = new TextEncoder();
+    const base = await crypto.subtle.importKey("raw", enc.encode(senha), "PBKDF2", false, ["deriveKey"]);
+    const sal = new Uint8Array([...salt, ...enc.encode(normUsuario(usuario))]);
+    return crypto.subtle.deriveKey(
+      { name: "PBKDF2", salt: sal, iterations: iteracoes, hash: "SHA-256" },
+      base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  }
+  async function cifrar(usuario, senha, segredo) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const chave = await derivarChave(usuario, senha, salt, ITERACOES);
+    const dados = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, chave, new TextEncoder().encode(segredo));
+    return {
+      usuario: normUsuario(usuario), iteracoes: ITERACOES,
+      salt: paraB64(salt), iv: paraB64(iv), dados: paraB64(dados),
+      inicial: senha.length < SENHA_MIN,
+    };
+  }
+  async function decifrar(reg, senha) {
+    const chave = await derivarChave(reg.usuario, senha, deB64(reg.salt), reg.iteracoes);
+    const claro = await crypto.subtle.decrypt({ name: "AES-GCM", iv: deB64(reg.iv) }, chave, deB64(reg.dados));
+    return new TextDecoder().decode(claro);
+  }
+
+  // Lê os usuários cadastrados: versão mais recente do repositório (se houver
+  // internet) ou a cópia carregada pela própria página.
+  async function lerAcessoPublico() {
+    try {
+      const url = `https://raw.githubusercontent.com/${REPO.owner}/${REPO.repo}/${REPO.branch}/${ARQ_ACESSO}?t=${Date.now()}`;
+      const r = await fetch(url, { cache: "no-store" });
+      if (r.ok) return deJs(await r.text());
+    } catch (e) { /* sem internet: usa a cópia local */ }
+    return window.MSTEE_ACESSO || { usuarios: [] };
+  }
+
+  // Grava o registro de um usuário em data/acesso.js (exige token já válido).
+  async function salvarAcesso(reg, substituir) {
+    let atual = { usuarios: [] }, sha;
+    try {
+      const a = await lerArquivo(ARQ_ACESSO);
+      atual = deJs(a.texto);
+      sha = a.sha;
+    } catch (e) {
+      if (e.status !== 404) throw e;
+    }
+    const remover = new Set([reg.usuario, substituir && normUsuario(substituir)]);
+    atual.usuarios = (atual.usuarios || []).filter((u) => !remover.has(u.usuario));
+    atual.usuarios.push(reg);
+    const texto = paraJs("MSTEE_ACESSO", JSON.stringify(atual, null, 2));
+    await gravarArquivo(ARQ_ACESSO, utf8ParaB64(texto), `Atualiza acesso do usuário ${reg.usuario}`, sha);
+  }
+
   /* ---------- login ---------- */
   async function entrar(t) {
     token = t;
-    const usuario = await gh("/user");
-    await gh(`/repos/${REPO.owner}/${REPO.repo}`); // confirma acesso ao repositório
+    await gh(`/repos/${REPO.owner}/${REPO.repo}`); // confirma que a chave acessa o repositório
     await carregarDados();
-    $("#usuario").textContent = usuario.login;
+    $("#usuario").textContent = usuarioAtual;
+    $("#aviso-senha").hidden = !senhaInicial;
     $("#tela-login").hidden = true;
     $("#tela-painel").hidden = false;
   }
+
+  function mostrarForm(qual) {
+    $("#form-login").hidden = qual !== "login";
+    $("#form-config").hidden = qual !== "config";
+    $("#login-erro").textContent = "";
+    $("#cfg-erro").textContent = "";
+    (qual === "login" ? $("#login-usuario") : $("#cfg-token")).focus();
+  }
+  document.querySelectorAll("[data-ir]").forEach((b) => b.addEventListener("click", () => mostrarForm(b.dataset.ir)));
+
+  async function comBotao(form, rotulo, fn) {
+    const btn = form.querySelector('button[type="submit"]');
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = rotulo;
+    try { await fn(); } finally { btn.disabled = false; btn.textContent = original; }
+  }
+
+  function msgErroChave(err) {
+    return err.status === 401 ? "A chave do GitHub é inválida ou expirou." :
+      err.status === 403 || err.status === 404 ? "A chave do GitHub não tem acesso de escrita ao repositório do site." :
+      err.message;
+  }
+
+  $("#form-login").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const erro = $("#login-erro");
+    erro.textContent = "";
+    comBotao(e.target, "Entrando…", async () => {
+      const usuario = normUsuario($("#login-usuario").value);
+      const senha = $("#login-senha").value;
+      const acesso = await lerAcessoPublico();
+      if (!acesso.usuarios || !acesso.usuarios.length) {
+        erro.textContent = "O painel ainda não foi configurado. Clique em \"Primeiro acesso\".";
+        return;
+      }
+      const reg = acesso.usuarios.find((u) => u.usuario === usuario);
+      let t;
+      try {
+        if (!reg) throw new Error();
+        t = await decifrar(reg, senha);
+      } catch (err) {
+        erro.textContent = err.message.includes("HTTPS") ? err.message : "Usuário ou senha incorretos.";
+        return;
+      }
+      usuarioAtual = reg.usuario;
+      senhaInicial = !!reg.inicial;
+      try {
+        await entrar(t);
+        gravarSessao($("#lembrar").checked);
+      } catch (err) {
+        token = "";
+        erro.textContent = err.status === 401
+          ? "A chave do GitHub guardada expirou. Clique em \"Primeiro acesso ou chave expirada\" para cadastrar uma nova."
+          : "Não foi possível entrar: " + msgErroChave(err);
+      }
+    });
+  });
+
+  $("#form-config").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const erro = $("#cfg-erro");
+    erro.textContent = "";
+    comBotao(e.target, "Salvando…", async () => {
+      const t = $("#cfg-token").value.trim();
+      const usuario = normUsuario($("#cfg-usuario").value);
+      const senha = $("#cfg-senha").value;
+      if (!usuario || !senha) { erro.textContent = "Preencha usuário e senha."; return; }
+      try {
+        token = t;
+        await gh(`/repos/${REPO.owner}/${REPO.repo}`);
+        const reg = await cifrar(usuario, senha, t);
+        await salvarAcesso(reg);
+        usuarioAtual = reg.usuario;
+        senhaInicial = reg.inicial;
+        await entrar(t);
+        gravarSessao($("#lembrar").checked);
+        toast("Acesso configurado. Nas próximas vezes entre com usuário e senha.");
+      } catch (err) {
+        token = "";
+        erro.textContent = msgErroChave(err);
+      }
+    });
+  });
+
+  /* ---------- alterar senha ---------- */
+  function abrirSenha() {
+    $("#nova-usuario").value = usuarioAtual;
+    $("#nova-senha").value = "";
+    $("#nova-senha2").value = "";
+    $("#senha-erro").textContent = "";
+    $("#dlg-senha").showModal();
+  }
+  $("#abrir-senha").addEventListener("click", abrirSenha);
+  document.querySelector("[data-abrir-senha]").addEventListener("click", abrirSenha);
+  $("#dlg-senha [data-fechar]").addEventListener("click", () => $("#dlg-senha").close());
+
+  $("#form-senha").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const erro = $("#senha-erro");
+    const usuario = normUsuario($("#nova-usuario").value);
+    const senha = $("#nova-senha").value;
+    erro.textContent = "";
+    if (!usuario) { erro.textContent = "Informe o usuário."; return; }
+    if (senha.length < SENHA_MIN) { erro.textContent = `A senha precisa ter pelo menos ${SENHA_MIN} caracteres.`; return; }
+    if (senha !== $("#nova-senha2").value) { erro.textContent = "As senhas não conferem."; return; }
+    comBotao(e.target, "Salvando…", async () => {
+      try {
+        const reg = await cifrar(usuario, senha, token);
+        await salvarAcesso(reg, usuarioAtual);
+        usuarioAtual = reg.usuario;
+        senhaInicial = false;
+        gravarSessao();
+        $("#usuario").textContent = usuarioAtual;
+        $("#aviso-senha").hidden = true;
+        $("#dlg-senha").close();
+        toast("Senha alterada. Use a nova senha no próximo login.");
+      } catch (err) {
+        erro.textContent = "Não foi possível salvar: " + msgErroChave(err);
+      }
+    });
+  });
 
   async function carregarDados() {
     const [r, a] = await Promise.all([lerArquivo(ARQ_RANKING), lerArquivo(ARQ_ANIV)]);
@@ -198,31 +396,9 @@
     atualizarStatus();
   }
 
-  $("#form-login").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const t = $("#token").value.trim();
-    const btn = e.submitter || $("#form-login button");
-    $("#login-erro").textContent = "";
-    btn.disabled = true;
-    btn.textContent = "Entrando…";
-    try {
-      await entrar(t);
-      gravarToken(t, $("#lembrar").checked);
-    } catch (err) {
-      token = "";
-      $("#login-erro").textContent =
-        err.status === 401 ? "Chave inválida ou expirada." :
-        err.status === 404 || err.status === 403 ? "Esta chave não tem acesso ao repositório do site." :
-        "Não foi possível entrar: " + err.message;
-    } finally {
-      btn.disabled = false;
-      btn.textContent = "Entrar";
-    }
-  });
-
   $("#sair").addEventListener("click", () => {
     if ((rankingSujo() || anivSujo()) && !confirm("Há alterações não publicadas. Sair mesmo assim?")) return;
-    apagarToken();
+    apagarSessao();
     location.reload();
   });
 
@@ -598,12 +774,15 @@
 
   /* ---------- início ---------- */
   (async function iniciar() {
-    const salvo = lerToken();
-    if (salvo) {
-      try { await entrar(salvo); return; }
-      catch (e) { apagarToken(); token = ""; }
+    const sessao = lerSessao();
+    if (sessao && sessao.token) {
+      usuarioAtual = sessao.usuario || "";
+      senhaInicial = !!sessao.inicial;
+      try { await entrar(sessao.token); return; }
+      catch (e) { apagarSessao(); token = ""; }
     }
     $("#tela-login").hidden = false;
-    $("#token").focus();
+    const acesso = await lerAcessoPublico();
+    mostrarForm(acesso.usuarios && acesso.usuarios.length ? "login" : "config");
   })();
 })();
