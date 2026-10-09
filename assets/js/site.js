@@ -35,10 +35,10 @@
   function normalizar(s) {
     return String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   }
-  async function carregar(arquivo) {
-    const r = await fetch(arquivo + "?v=" + Date.now(), { cache: "no-store" });
-    if (!r.ok) throw new Error("Falha ao carregar " + arquivo);
-    return r.json();
+  async function carregar(variavel) {
+    const d = window[variavel];
+    if (!d) throw new Error("Dados não encontrados: " + variavel);
+    return d;
   }
 
   /* ---------- aniversariantes ---------- */
@@ -47,7 +47,7 @@
     if (!alvo) return;
     const limite = parseInt(alvo.dataset.limite || "0", 10);
     try {
-      const d = await carregar("data/aniversarios.json");
+      const d = await carregar("MSTEE_ANIVERSARIOS");
       document.querySelectorAll("[data-aniv-titulo]").forEach((el) => {
         el.textContent = MESES[d.mes - 1] + " " + d.ano;
       });
@@ -85,7 +85,7 @@
     const alvo = document.querySelector("[data-ranking-previa]");
     if (!alvo) return;
     try {
-      const d = await carregar("data/ranking.json");
+      const d = await carregar("MSTEE_RANKING");
       document.querySelectorAll("[data-ranking-titulo]").forEach((el) => {
         el.textContent = MESES[d.mes - 1] + " / " + d.ano;
       });
@@ -106,7 +106,7 @@
     if (!alvo) return;
     let dados;
     try {
-      dados = await carregar("data/ranking.json");
+      dados = await carregar("MSTEE_RANKING");
     } catch (e) {
       alvo.innerHTML = '<p class="muted">Não foi possível carregar o ranking.</p>';
       return;

@@ -1,7 +1,7 @@
 /* MStee — área do administrador
  *
  * O site é estático. Este painel lê e grava os arquivos
- * data/ranking.json, data/aniversarios.json e as fotos dos aniversariantes
+ * data/ranking.js, data/aniversarios.js e as fotos dos aniversariantes
  * diretamente no repositório, usando a API do GitHub com o token do
  * administrador. Cada "Salvar e publicar" vira um commit no repositório.
  */
@@ -10,8 +10,8 @@
 
   /* ---------- configuração ---------- */
   const REPO = { owner: "felgoulart", repo: "mstee", branch: "main" };
-  const ARQ_RANKING = "data/ranking.json";
-  const ARQ_ANIV = "data/aniversarios.json";
+  const ARQ_RANKING = "data/ranking.js";
+  const ARQ_ANIV = "data/aniversarios.js";
   const PASTA_FOTOS = "assets/img/aniversarios";
   const CHAVE_TOKEN = "mstee_admin_token";
 
@@ -115,6 +115,15 @@
   }
 
   /* ---------- serialização ---------- */
+  // Os dados ficam em arquivos .js (window.VAR = {...};) para o site funcionar
+  // também quando aberto direto do disco, onde o navegador bloqueia fetch de JSON.
+  function deJs(texto) {
+    return JSON.parse(texto.slice(texto.indexOf("{"), texto.lastIndexOf("}") + 1));
+  }
+  function paraJs(variavel, json) {
+    return "/* Dados do site. Editado pela área do administrador (admin.html). */\n" +
+      "window." + variavel + " = " + json.trimEnd() + ";\n";
+  }
   function serialRanking(r) {
     return JSON.stringify({
       mes: +r.mes,
@@ -178,10 +187,10 @@
 
   async function carregarDados() {
     const [r, a] = await Promise.all([lerArquivo(ARQ_RANKING), lerArquivo(ARQ_ANIV)]);
-    st.ranking = JSON.parse(r.texto);
+    st.ranking = deJs(r.texto);
     st.rankingSha = r.sha;
     st.rankingOrig = serialRanking(st.ranking);
-    st.aniv = JSON.parse(a.texto);
+    st.aniv = deJs(a.texto);
     st.anivSha = a.sha;
     st.anivOrig = serialAniv(st.aniv);
     renderRanking();
@@ -526,7 +535,7 @@
         status.textContent = "Publicando ranking…";
         const texto = serialRanking(st.ranking);
         const r = st.ranking;
-        st.rankingSha = await gravarArquivo(ARQ_RANKING, utf8ParaB64(texto),
+        st.rankingSha = await gravarArquivo(ARQ_RANKING, utf8ParaB64(paraJs("MSTEE_RANKING", texto)),
           `Atualiza ranking ${MESES[r.mes - 1]}/${r.ano}`, st.rankingSha);
         st.rankingOrig = texto;
       }
@@ -545,7 +554,7 @@
         a.aniversariantes.forEach((p) => { delete p._novaFoto; });
         status.textContent = "Publicando aniversariantes…";
         const texto = serialAniv(a);
-        st.anivSha = await gravarArquivo(ARQ_ANIV, utf8ParaB64(texto),
+        st.anivSha = await gravarArquivo(ARQ_ANIV, utf8ParaB64(paraJs("MSTEE_ANIVERSARIOS", texto)),
           `Atualiza aniversariantes ${MESES[a.mes - 1]}/${a.ano}`, st.anivSha);
         st.anivOrig = texto;
         // mantém a lista na mesma ordem em que foi publicada

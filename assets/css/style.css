@@ -342,7 +342,7 @@ p { margin: 0 0 1em; }
 .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
 .contact-card { background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .1); border-radius: var(--radius); padding: 24px; }
 .contact-card .label { font-family: var(--font-head); text-transform: uppercase; letter-spacing: .1em; color: #9aa1ab; font-size: .9rem; }
-.contact-card a, .contact-card .value { display: block; color: #fff; font-size: 1.2rem; font-weight: 600; text-decoration: none; margin-top: 4px; word-break: break-word; }
+.contact-card a, .contact-card .value { display: block; color: #fff; font-size: 1.05rem; font-weight: 600; text-decoration: none; margin-top: 4px; overflow-wrap: anywhere; }
 .contact-card a:hover { color: var(--ball); }
 
 /* ---------- rodapé ---------- */

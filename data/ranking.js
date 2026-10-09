@@ -1,0 +1,211 @@
+/* Dados do site. Editado pela área do administrador (admin.html). */
+window.MSTEE_RANKING = {
+  "mes": 10,
+  "ano": 2026,
+  "categorias": [
+    {
+      "nome": "Adulto Masculino",
+      "jogadores": [
+        {
+          "pos": 1,
+          "nome": "Rodrigo Luiz Guimarães de Sá Peixoto"
+        },
+        {
+          "pos": 2,
+          "nome": "David da Fonseca Mussel Jones"
+        },
+        {
+          "pos": 3,
+          "nome": "Gabriel Timoteo de Moraes"
+        },
+        {
+          "pos": 4,
+          "nome": "Rhenan Botamedi Captivo"
+        },
+        {
+          "pos": 5,
+          "nome": "Fabiano Freitas Barbosa"
+        },
+        {
+          "pos": 6,
+          "nome": "Mateus Rafaelli Castilhos"
+        },
+        {
+          "pos": 7,
+          "nome": "Raphael Miguez Mançur"
+        },
+        {
+          "pos": 8,
+          "nome": "Rodrigo Lage Sacramento"
+        },
+        {
+          "pos": 9,
+          "nome": "Pedro Faria Cazes"
+        },
+        {
+          "pos": 10,
+          "nome": "Alexandre Rodrigues da Silva"
+        },
+        {
+          "pos": 11,
+          "nome": "Luís Eduardo Carvalho Alegria"
+        },
+        {
+          "pos": 12,
+          "nome": "Cláudio Roberto B. B. Cardoso da Silva"
+        },
+        {
+          "pos": 13,
+          "nome": "Silvio da Silva Pereira"
+        },
+        {
+          "pos": 14,
+          "nome": "Juan Carlos Trillo Cuns"
+        },
+        {
+          "pos": 15,
+          "nome": "Miguel de Albuquerque Reginato"
+        },
+        {
+          "pos": 16,
+          "nome": "Renato Martins Dias Carneiro"
+        },
+        {
+          "pos": 17,
+          "nome": "Gustavo Henrique Carneiro de Camargo Kastrup"
+        },
+        {
+          "pos": 18,
+          "nome": "Fellipe Fontes de Matos Youle"
+        },
+        {
+          "pos": 19,
+          "nome": "Thomas Di Bruce"
+        },
+        {
+          "pos": 20,
+          "nome": "Allan Brado"
+        }
+      ]
+    },
+    {
+      "nome": "Adulto Feminino",
+      "jogadores": [
+        {
+          "pos": 1,
+          "nome": "Joanna Reis Santos de Oliveira"
+        },
+        {
+          "pos": 2,
+          "nome": "Mary D. Rodrigues Flores"
+        },
+        {
+          "pos": 3,
+          "nome": "Marcia Adriana Leitão Maia"
+        },
+        {
+          "pos": 4,
+          "nome": "Maria das Graças Sampaio Costa"
+        },
+        {
+          "pos": 5,
+          "nome": "Julia Rabello Ferreira Alexandre"
+        },
+        {
+          "pos": 6,
+          "nome": "Rafaella Jorgea Suécia da Costa"
+        },
+        {
+          "pos": 7,
+          "nome": "Carolina Ribeiro de Sousa"
+        },
+        {
+          "pos": 8,
+          "nome": "Claudia Mançur"
+        },
+        {
+          "pos": 9,
+          "nome": "Roberta Silva"
+        }
+      ]
+    },
+    {
+      "nome": "Master Masculino",
+      "jogadores": [
+        {
+          "pos": 1,
+          "nome": "Telmo Hernani D. Seabra da Cruz"
+        },
+        {
+          "pos": 2,
+          "nome": "Carlos Roberto Furtado"
+        },
+        {
+          "pos": 3,
+          "nome": "Alfredo Sotto Fernandes Junior"
+        },
+        {
+          "pos": 4,
+          "nome": "Antonino Medeiros Junior"
+        },
+        {
+          "pos": 5,
+          "nome": "Carlos Henrique Carvalho"
+        },
+        {
+          "pos": 6,
+          "nome": "Marcus Santos de Pinho"
+        },
+        {
+          "pos": 7,
+          "nome": "Robinson Andrade"
+        },
+        {
+          "pos": 8,
+          "nome": "Gilson Cesar Braga Di Luccas"
+        },
+        {
+          "pos": 9,
+          "nome": "Robson Mançur"
+        },
+        {
+          "pos": 10,
+          "nome": "Sérgio David Gonçalves Lomba"
+        },
+        {
+          "pos": 11,
+          "nome": "Ademar Gomes de Oliveira Filho"
+        },
+        {
+          "pos": 12,
+          "nome": "Jacy Borrou"
+        }
+      ]
+    },
+    {
+      "nome": "Infantil Misto",
+      "jogadores": [
+        {
+          "pos": 1,
+          "nome": "Luis Felipe Maia Serpa"
+        },
+        {
+          "pos": 2,
+          "nome": "Nicholas Renno Torres"
+        },
+        {
+          "pos": 3,
+          "nome": "Mariana Ferreira Silva"
+        },
+        {
+          "pos": 4,
+          "nome": "Sophia de Souza"
+        },
+        {
+          "pos": 5,
+          "nome": "Lucas Daflon"
+        }
+      ]
+    }
+  ]
+};

@@ -6,7 +6,7 @@ Site estático da MStee Aulas de Tênis (Rio de Janeiro). Pode ser hospedado em 
 - `ranking.html` — ranking completo por categoria, com busca
 - `aniversarios.html` — aniversariantes do mês
 - `admin.html` — área do administrador
-- `data/ranking.json` e `data/aniversarios.json` — dados exibidos no site
+- `data/ranking.js` e `data/aniversarios.js` — dados exibidos no site (em `.js` para o site funcionar também aberto direto do disco)
 
 ## Área do administrador
 

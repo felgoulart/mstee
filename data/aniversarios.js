@@ -1,4 +1,5 @@
-{
+/* Dados do site. Editado pela área do administrador (admin.html). */
+window.MSTEE_ANIVERSARIOS = {
   "mes": 10,
   "ano": 2026,
   "aniversariantes": [
@@ -21,4 +22,4 @@
       "mensagem": "Uma ótima aluna, super dedicada, tem evoluído bastante tecnicamente pelos poucos meses de aula. Está no caminho certo e em pouco tempo já jogará games sozinha. Parabéns, Rafa (camisa preta)."
     }
   ]
-}
+};
